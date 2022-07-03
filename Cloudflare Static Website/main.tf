@@ -37,7 +37,7 @@ resource "aws_s3_bucket_policy" "site" {
         ]
       },
     ]
-  })
+  }
 }
 
 resource "aws_s3_bucket" "www" {
@@ -90,16 +90,5 @@ resource "cloudflare_page_rule" "https" {
   target  = "*.${var.site_domain}/*"
   actions {
     always_use_https = true
-  }
-}
-
-resource "cloudflare_page_rule" "redirect-to-learn" {
-  zone_id = data.cloudflare_zones.domain.zones[0].id
-  target  = "${var.site_domain}/learn"
-  actions {
-    forwarding_url {
-      status_code = 302
-      url         = "https://learn.hashicorp.com/terraform"
-    }
   }
 }
