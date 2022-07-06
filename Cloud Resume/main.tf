@@ -1,9 +1,27 @@
+
+
 ## Set up bucket named "site" ##
 resource "aws_s3_bucket" "site" {
   bucket = var.site_domain
 }
 
-## Set the newly created bucket website configuration ##
+## Create S3 bucket for artifact storage ##
+resource "aws_s3_bucket" "codepipeline_bucket" {
+  bucket = var.artifact_storage
+}
+
+## create a bucket to redirect www ##
+resource "aws_s3_bucket" "www" {
+  bucket = "www.${var.site_domain}"
+}
+
+## Set the artifact bucket ACL ##
+resource "aws_s3_bucket_acl" "codepipeline_bucket" {
+  bucket = aws_s3_bucket.codepipeline_bucket.id
+  acl    = "private"
+}
+
+## Set the site bucket website configuration ##
 resource "aws_s3_bucket_website_configuration" "site" {
   bucket = aws_s3_bucket.site.id
 
@@ -19,8 +37,7 @@ resource "aws_s3_bucket_website_configuration" "site" {
 ## Set bucket ACL to public read ##
 resource "aws_s3_bucket_acl" "site" {
   bucket = aws_s3_bucket.site.id
-
-  acl = "public-read"
+  acl    = "public-read"
 }
 
 ## Set bucket access policy to public allow get all ##
@@ -44,22 +61,17 @@ resource "aws_s3_bucket_policy" "site" {
   })
 }
 
-## create a bucket to redirect www ##
-resource "aws_s3_bucket" "www" {
-  bucket = "www.${var.site_domain}"
-}
+
 
 ## set ACL to private, bucket will store nothing ##
 resource "aws_s3_bucket_acl" "www" {
   bucket = aws_s3_bucket.www.id
-
-  acl = "private"
+  acl    = "private"
 }
 
 ## set bucket to redirect all www requests to actual webpage ##
 resource "aws_s3_bucket_website_configuration" "www" {
   bucket = aws_s3_bucket.www.id
-
   redirect_all_requests_to {
     host_name = var.site_domain
   }
@@ -100,3 +112,58 @@ resource "cloudflare_page_rule" "https" {
     always_use_https = true
   }
 }
+
+## Create Github connection ##
+resource "aws_codestarconnections_connection" "Github" {
+  name          = "Github"
+  provider_type = "GitHub"
+}
+
+## setup AWS Code pipeline to get automatically get webpage from github ##
+resource "aws_codepipeline" "codepipeline" {
+  name     = "Cloud-resume-deploy"
+  role_arn = "arn:aws:iam::337461354076:role/service-role/Codepipeline-Role"
+
+  artifact_store {
+    location = aws_s3_bucket.codepipeline_bucket.bucket
+    type     = "S3"
+  }
+  stage {
+    name = "Source"
+    action {
+      name             = "Source"
+      category         = "Source"
+      owner            = "AWS"
+      provider         = "CodeStarSourceConnection"
+      version          = "1"
+      output_artifacts = ["SourceArtifact"]
+      region           = "ap-southeast-2"
+
+      configuration = {
+        ConnectionArn        = aws_codestarconnections_connection.Github.id
+        FullRepositoryId     = "wgarbutt/CloudResume"
+        BranchName           = "main"
+        OutputArtifactFormat = "CODE_ZIP"
+      }
+    }
+  }
+  stage {
+    name = "Deploy"
+    action {
+      name            = "Deploy"
+      category        = "Deploy"
+      owner           = "AWS"
+      provider        = "S3"
+      input_artifacts = ["SourceArtifact"]
+      version         = "1"
+      region          = "ap-southeast-2"
+ configuration = {
+      BucketName = var.site_domain
+      Extract = true
+      }
+
+    }
+  }
+}
+
+
