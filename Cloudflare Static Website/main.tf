@@ -37,7 +37,7 @@ resource "aws_s3_bucket_policy" "site" {
         ]
       },
     ]
-  }
+  })
 }
 
 resource "aws_s3_bucket" "www" {
@@ -92,3 +92,8 @@ resource "cloudflare_page_rule" "https" {
     always_use_https = true
   }
 }
+
+
+
+
+#### https://learn.hashicorp.com/tutorials/terraform/cloudflare-static-website?in=terraform/aws ####
