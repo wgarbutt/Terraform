@@ -16,7 +16,6 @@ resource "aws_s3_bucket_website_configuration" "site" {
   }
 }
 
-
 ## Set bucket ACL to public read ##
 resource "aws_s3_bucket_acl" "site" {
   bucket = aws_s3_bucket.site.id
@@ -45,18 +44,19 @@ resource "aws_s3_bucket_policy" "site" {
   })
 }
 
-
-
+## create a bucket to redirect www ##
 resource "aws_s3_bucket" "www" {
   bucket = "www.${var.site_domain}"
 }
 
+## set ACL to private, bucket will store nothing ##
 resource "aws_s3_bucket_acl" "www" {
   bucket = aws_s3_bucket.www.id
 
   acl = "private"
 }
 
+## set bucket to redirect all www requests to actual webpage ##
 resource "aws_s3_bucket_website_configuration" "www" {
   bucket = aws_s3_bucket.www.id
 
@@ -65,33 +65,34 @@ resource "aws_s3_bucket_website_configuration" "www" {
   }
 }
 
+## Setup domain on Cloudflare ##
 data "cloudflare_zones" "domain" {
   filter {
     name = var.site_domain
   }
 }
 
+## setup cname record to point to AWS bucket static website ##
 resource "cloudflare_record" "site_cname" {
   zone_id = data.cloudflare_zones.domain.zones[0].id
   name    = var.site_domain
   value   = aws_s3_bucket_website_configuration.www.website_endpoint
   type    = "CNAME"
-
   ttl     = 1
   proxied = true
 }
 
+## setup cname to point www to main website ##
 resource "cloudflare_record" "www" {
   zone_id = data.cloudflare_zones.domain.zones[0].id
   name    = "www"
   value   = var.site_domain
   type    = "CNAME"
-
   ttl     = 1
   proxied = true
-
 }
 
+## set to always use HTTPS ##
 resource "cloudflare_page_rule" "https" {
   zone_id = data.cloudflare_zones.domain.zones[0].id
   target  = "*.${var.site_domain}/*"
