@@ -1,7 +1,9 @@
+## Set up bucket named "site" ##
 resource "aws_s3_bucket" "site" {
   bucket = var.site_domain
 }
 
+## Set the newly created bucket website configuration ##
 resource "aws_s3_bucket_website_configuration" "site" {
   bucket = aws_s3_bucket.site.id
 
@@ -14,12 +16,15 @@ resource "aws_s3_bucket_website_configuration" "site" {
   }
 }
 
+
+## Set bucket ACL to public read ##
 resource "aws_s3_bucket_acl" "site" {
   bucket = aws_s3_bucket.site.id
 
   acl = "public-read"
 }
 
+## Set bucket access policy to public allow get all ##
 resource "aws_s3_bucket_policy" "site" {
   bucket = aws_s3_bucket.site.id
 
@@ -35,10 +40,12 @@ resource "aws_s3_bucket_policy" "site" {
           aws_s3_bucket.site.arn,
           "${aws_s3_bucket.site.arn}/*",
         ]
-      },
+      }
     ]
   })
 }
+
+
 
 resource "aws_s3_bucket" "www" {
   bucket = "www.${var.site_domain}"
@@ -90,16 +97,5 @@ resource "cloudflare_page_rule" "https" {
   target  = "*.${var.site_domain}/*"
   actions {
     always_use_https = true
-  }
-}
-
-resource "cloudflare_page_rule" "redirect-to-learn" {
-  zone_id = data.cloudflare_zones.domain.zones[0].id
-  target  = "${var.site_domain}/learn"
-  actions {
-    forwarding_url {
-      status_code = 302
-      url         = "https://learn.hashicorp.com/terraform"
-    }
   }
 }
