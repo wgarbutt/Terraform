@@ -1,0 +1,21 @@
+#cloud-config
+package_upgrade: true
+packages:
+  - qemu-guest-agent
+
+timezone: Pacific/Auckland
+users:
+  - name: will
+    passwd: Benhur12
+    groups: [adm, cdrom, dip, plugdev, lxd, sudo]
+    lock-passwd: false
+    sudo: ALL=(ALL) NOPASSWD:ALL
+    shell: /bin/bash
+    ssh_authorized_keys:
+      - ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQCto5rfYHMV1ieNdycS0JC2KuIclUrF/kw1WyqMP7l8kHGklI4YV0z4xiSbp0sfSPFO+4OS9R1tmHQ/bWKGWtodAZQgHemsQWuSofoBGgasXY4FA/1MConJs8atM9UzDKoDEhmLD99JLy4ScobensG42/sAvooshtFG+Ld/KTGE+/xpdpVcQPQTv13QJUyxeXnMKFXJUORVKEfrLD6cygoMIpJuW0uzmzXN6RBgCqfT0DRb1m7J0eiMjIcsq4pHLKg5OTMzu7djahZEIAS+d2BgNWguDtwzHj887XLcAMuPjwR7YhdKZY3cMOCpWRhqfDWao9zetGhRLErP05mcRIPl rsa-key-20240326
+
+power_state:
+    delay: now
+    mode: reboot
+    message: Rebooting after cloud-init completion
+    condition: true
